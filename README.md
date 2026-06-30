@@ -23,7 +23,7 @@ Multi-label image classifier that predicts four clothing attributes (color, seas
 CMPT310 Project/
 ├── data/
 │   ├── raw/           ← downloaded Kaggle dataset goes here
-│   └── processed/     ← resized .npy image arrays (auto-generated)
+│   └── processed/     ← cleaned CSV splits and 96x96 processed images (auto-generated)
 ├── src/
 │   └── data_loader.py      ← load CSV, check labels, filter & balance
 ├── notebooks/
@@ -77,7 +77,65 @@ This places `styles.csv` and an `images/` folder inside `data/raw/`.
 | `articleType`          | type       |
 | `usage`                | usage      |
 
-### 4. Explore the Data
+### 4. Preprocess and Split the Dataset
+
+After downloading the Kaggle dataset into `data/raw/`, run this command from the project root:
+
+```bash
+python src/preprocess_split.py
+```
+
+This script prepares the dataset for model training by:
+
+- Loading `data/raw/styles.csv`
+- Removing rows with missing labels for `baseColour`, `season`, `articleType`, or `usage`
+- Removing rows where the matching image file is missing
+- Resizing images to `96x96` RGB using aspect-ratio-preserving padding
+- Saving processed images into `data/processed/images_96/`
+- Creating train/validation/test CSV files
+
+Generated files:
+
+```text
+data/processed/metadata_clean.csv
+data/processed/train.csv
+data/processed/val.csv
+data/processed/test.csv
+data/processed/images_96/
+```
+
+Split ratio:
+
+```text
+70% train
+15% validation
+15% test
+```
+
+For model training, use:
+
+```text
+data/processed/train.csv
+data/processed/val.csv
+data/processed/test.csv
+```
+
+Each CSV contains:
+
+```text
+id
+image_path
+baseColour
+season
+articleType
+usage
+```
+
+The `image_path` column points to the processed `96x96` image.
+
+Note: The `data/` folder is ignored by GitHub, so each team member needs to download the Kaggle dataset and run the preprocessing script locally.
+
+### 5. Explore the Data
 
 Launch Jupyter and open the exploration notebook:
 
@@ -106,3 +164,4 @@ python -c "import tensorflow, sklearn, PIL; print('All imports OK')"
 |-----------|------|
 | **1** | Data download, label inspection, preprocessing pipeline, KNN baseline skeleton |
 | **2** | Fine-tune MobileNetV2/ResNet50, full evaluation, Gradio demo |
+git 
