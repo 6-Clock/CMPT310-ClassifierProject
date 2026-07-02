@@ -5,13 +5,14 @@ from PIL import Image, ImageOps
 from tqdm import tqdm
 
 # Project paths
-RAW_CSV = Path("data/raw/styles.csv")
-RAW_IMAGE_DIR = Path("data/raw/images")
+# RAW_CSV = Path("data/raw/styles.csv")
+# RAW_IMAGE_DIR = Path("data/raw/images")
+CLEANED_CSV = Path("data/processed/clean_colour_season_style.csv")
 PROCESSED_DIR = Path("data/processed")
 PROCESSED_IMAGE_DIR = PROCESSED_DIR / "images_96"
 
 # Labels our project wants to predict
-TARGET_COLS = ["baseColour", "season", "articleType", "usage"]
+TARGET_COLS = ["baseColour", "season", "usage"]     # removed "articleType"
 
 # Image preprocessing settings
 IMG_SIZE = 96
@@ -19,24 +20,34 @@ IMG_SIZE = 96
 # Makes the split reproducible
 RANDOM_STATE = 42
 
+def load_clean_metadata() -> pd.DataFrame:
+    if not CLEANED_CSV.exists():
+        raise FileNotFoundError(f"Cleaned CSV not found: {CLEANED_CSV}")
 
-def clean_metadata() -> pd.DataFrame:
-    df = pd.read_csv(RAW_CSV, on_bad_lines="skip")
-    print(f"Loaded rows: {len(df)}")
+    df = pd.read_csv(CLEANED_CSV)
 
-    df = df.dropna(subset=TARGET_COLS).copy()
-    print(f"After dropping missing labels: {len(df)}")
+    keep_cols = ["id", "image_path"] + TARGET_COLS
+    df = df[keep_cols].copy()
 
-    df["raw_image_path"] = df["id"].astype(str).apply(
-        lambda image_id: str(RAW_IMAGE_DIR / f"{image_id}.jpg")
-    )
+    return df.reset_index(drop=True)
 
-    df["image_exists"] = df["raw_image_path"].apply(lambda path: Path(path).exists())
-    df = df[df["image_exists"]].copy()
-    print(f"After dropping missing images: {len(df)}")
+# def clean_metadata() -> pd.DataFrame:
+#     df = pd.read_csv(RAW_CSV, on_bad_lines="skip")
+#     print(f"Loaded rows: {len(df)}")
 
-    keep_cols = ["id", "raw_image_path"] + TARGET_COLS
-    return df[keep_cols].reset_index(drop=True)
+#     df = df.dropna(subset=TARGET_COLS).copy()
+#     print(f"After dropping missing labels: {len(df)}")
+
+#     df["raw_image_path"] = df["id"].astype(str).apply(
+#         lambda image_id: str(RAW_IMAGE_DIR / f"{image_id}.jpg")
+#     )
+
+#     df["image_exists"] = df["raw_image_path"].apply(lambda path: Path(path).exists())
+#     df = df[df["image_exists"]].copy()
+#     print(f"After dropping missing images: {len(df)}")
+
+#     keep_cols = ["id", "raw_image_path"] + TARGET_COLS
+#     return df[keep_cols].reset_index(drop=True)
 
 
 def resize_with_padding(input_path: Path, output_path: Path, size: int = IMG_SIZE):
@@ -60,7 +71,7 @@ def resize_images(df: pd.DataFrame) -> pd.DataFrame:
     processed_paths = []
 
     for _, row in tqdm(df.iterrows(), total=len(df), desc="Resizing images"):
-        input_path = Path(row["raw_image_path"])
+        input_path = Path(row["image_path"])
         output_path = PROCESSED_IMAGE_DIR / input_path.name
 
         if not output_path.exists():
@@ -117,7 +128,8 @@ def save_outputs(df, train_df, val_df, test_df):
 
 
 def main():
-    df = clean_metadata()
+    # df = clean_metadata()
+    df = load_clean_metadata()
     df = resize_images(df)
     train_df, val_df, test_df = split_metadata(df)
     save_outputs(df, train_df, val_df, test_df)
