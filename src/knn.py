@@ -24,7 +24,7 @@ MODEL_PATH = MODEL_DIR / "knn_baseline.joblib"
 # KNN settings
 # =========================
 
-IMAGE_SIZE = (224, 224)
+IMAGE_SIZE = (96, 96)
 RANDOM_STATE = 42
 TEST_SIZE = 0.2
 N_NEIGHBORS = 5

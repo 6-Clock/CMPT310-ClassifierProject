@@ -79,7 +79,13 @@ This places `styles.csv` and an `images/` folder inside `data/raw/`.
 
 ### 4. Preprocess and Split the Dataset
 
-After downloading the Kaggle dataset into `data/raw/`, run this command from the project root:
+After dowloading the Kaggle dataset, clean the dataset and balance it:
+
+```bash
+python src/balance_clean_dataset.py
+```
+
+Run this command from the project root:
 
 ```bash
 python src/preprocess_split.py
@@ -135,7 +141,48 @@ The `image_path` column points to the processed `96x96` image.
 
 Note: The `data/` folder is ignored by GitHub, so each team member needs to download the Kaggle dataset and run the preprocessing script locally.
 
-### 5. Explore the Data
+### 5. Train the KNN Baseline
+
+With the venv active and the dataset downloaded, run these two scripts in order from the project root:
+
+```powershell
+python src/balance_clean_dataset.py
+python src/knn.py
+```
+
+`balance_clean_dataset.py`:
+- Loads `data/raw/styles.csv`, keeps only `Apparel` items with reliable `baseColour`, `season`, and `usage` labels
+- Balances the dataset by `usage` (up to 1500 samples per class) and tops up underrepresented seasons
+- Saves the result to `data/processed/clean_colour_season_style.csv`
+
+`knn.py`:
+- Loads `data/processed/clean_colour_season_style.csv` (must be run after `balance_clean_dataset.py`)
+- Resizes each image to 96×96, flattens it, and encodes the `baseColour`, `season`, and `usage` labels
+- Splits into train/test (80/20, stratified by `usage`), trains a `MultiOutputClassifier` wrapping `KNeighborsClassifier(k=5, weights="distance")`
+- Prints exact-match accuracy plus per-label accuracy, weighted F1, and a classification report
+- Saves the trained model to `models/knn_baseline.joblib`
+
+#### About `knn_baseline.joblib`
+
+A dictionary saved with `joblib.dump`, containing everything needed to reuse the trained model without retraining:
+
+- `model` — the fitted `MultiOutputClassifier` (KNN) for `baseColour`, `season`, and `usage`
+- `label_encoders` — a `LabelEncoder` per label, used to map predictions back to text
+- `label_columns` — `["baseColour", "season", "usage"]`
+- `image_size` — `(96, 96)`, the size images must be resized to before prediction
+
+### 5.1 Use the train model
+
+**Example: load the model and predict on a new image**
+**Use the included script:** drop a test image into a `testingimgs/` folder in the project root, then run:
+
+```powershell
+python src/predict_knn.py testingimgs/your_image.jpg
+```
+
+This prints the predicted `baseColour`, `season`, and `usage` for that image.
+
+### 6. Explore the Data
 
 Launch Jupyter and open the exploration notebook:
 
