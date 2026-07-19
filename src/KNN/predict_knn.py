@@ -2,7 +2,7 @@
 Run the trained KNN baseline on a single image.
 
 Usage (from project root, venv active):
-    python src/predict_knn.py testingimgs/your_image.jpg
+    python src/KNN/predict_knn.py testingimgs/your_image.jpg
 """
 
 import sys
@@ -12,12 +12,12 @@ import joblib
 import numpy as np
 from PIL import Image
 
-MODEL_PATH = Path("models/knn_baseline.joblib")
+MODEL_PATH = Path("models/KNN/knn_baseline.joblib")
 
 
 def predict(image_path: Path):
     if not MODEL_PATH.exists():
-        raise FileNotFoundError(f"Model not found: {MODEL_PATH}. Run src/knn.py first.")
+        raise FileNotFoundError(f"Model not found: {MODEL_PATH}. Run src/KNN/knn.py first.")
 
     if not image_path.exists():
         raise FileNotFoundError(f"Image not found: {image_path}")
@@ -41,7 +41,7 @@ def predict(image_path: Path):
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("Usage: python src/predict_knn.py <path_to_image>")
+        print("Usage: python src/KNN/predict_knn.py <path_to_image>")
         raise SystemExit(1)
 
     predict(Path(sys.argv[1]))

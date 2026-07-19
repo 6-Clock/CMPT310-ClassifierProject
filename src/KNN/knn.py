@@ -16,7 +16,7 @@ from sklearn.metrics import accuracy_score, f1_score, classification_report
 # =========================
 
 CLEAN_CSV = Path("data/processed/clean_colour_season_style.csv")
-MODEL_DIR = Path("models")
+MODEL_DIR = Path("models/KNN")
 MODEL_PATH = MODEL_DIR / "knn_baseline.joblib"
 
 
