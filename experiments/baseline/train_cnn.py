@@ -79,8 +79,6 @@ UNFREEZE_LAST_N = 40    #Unfreeze the N last layers (Stage 2)
 
 RANDOM_STATE = 42 #Random Seed, we set it just make the random operations reproducible
 
-# Prevent extremely rare classes from dominating the total loss.
-MAX_CLASS_WEIGHT = 4.0
 
 # =========================================================================
 # 1. Labels: fit one LabelEncoder per column
@@ -121,14 +119,7 @@ def compute_all_class_weights(df, encoders):
             y=y,
         )
 
-        # Raw balanced weights make Spring/Winter approximately 12.5x.
-        # Cap extreme values so rare classes still matter without dominating training.
-        weights = np.minimum(weights, MAX_CLASS_WEIGHT)
-
-        class_weights[col] = {
-            int(c): float(w)
-            for c, w in zip(classes, weights)
-        }
+        class_weights[col] = {int(c): float(w) for c, w in zip(classes, weights)}
     return class_weights
 
 
