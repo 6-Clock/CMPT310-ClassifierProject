@@ -47,7 +47,7 @@ from src.CNN.train_cnn import (
     HISTORY_PATH,
 )
 
-TEST_CSV = Path("data/processed/test.csv")
+TEST_CSV = Path("data/processed/test_v2.csv")
 REPORTS_DIR = Path("reports")
 
 # The saved KNN baseline (src/KNN/knn.py), used for the comparison table.
@@ -190,11 +190,18 @@ def evaluate_knn_baseline(test_df):
     rows the CNN was just evaluated on, so the comparison table is apples-to-
     apples on identical images.
 
-    CAVEAT: the KNN model was originally trained on its own 80/20 split of
-    `clean_colour_season_style.csv`, not on the CNN's train/val/test split.
-    Some of these "test" images may have been in the KNN's own training set,
-    which can make the KNN score look slightly better than true generalization
-    performance. Worth a one-line mention in the report.
+    CAVEATS:
+    - The KNN model was trained on the OLD V1 dataset (its own 80/20 split of
+      `clean_colour_season_style.csv`), not on the CNN's V2 train/val/test
+      split. Some of these "test" images may have been in the KNN's own
+      training set, which can make the KNN score look slightly better than
+      true generalization performance.
+    - The V1 and V2 datasets use different colour label sets: V2 consolidates
+      shades (e.g. Navy Blue -> Blue) and adds Yellow/Beige/Orange, which the
+      V1-trained KNN has never seen. Test rows whose true colour is unknown to
+      the KNN are excluded from the COLOUR comparison only (season/usage are
+      unaffected, since those class sets didn't change) — the exclusion count
+      is printed below so this isn't silently hidden.
     """
     if not KNN_MODEL_PATH.exists():
         print(f"No KNN model found at {KNN_MODEL_PATH}, skipping comparison. "
@@ -207,11 +214,13 @@ def evaluate_knn_baseline(test_df):
     knn_cols = bundle["label_columns"]          # ["baseColour", "season", "usage"]
     image_size = bundle["image_size"]           # (96, 96)
 
-    # test.csv's image_path already points at the pre-resized 96x96 JPEGs, so
-    # this is the exact same flatten-to-vector step knn.py used at train time.
+    # test_v2.csv's image_path already points at the pre-resized 96x96 JPEGs
+    # (images_96_v2/), so this is the same flatten-to-vector step knn.py used
+    # at train time. Normalize backslashes (from a CSV generated on Windows)
+    # to forward slashes, which work on both Windows and Linux.
     X = []
     for path in test_df["image_path"]:
-        img = Image.open(path).convert("RGB").resize(image_size)
+        img = Image.open(path.replace("\\", "/")).convert("RGB").resize(image_size)
         X.append(np.array(img, dtype=np.float32).flatten() / 255.0)
     X = np.array(X, dtype=np.float32)
 
@@ -219,8 +228,21 @@ def evaluate_knn_baseline(test_df):
 
     metrics = {}
     for i, col in enumerate(knn_cols):
-        y_true = knn_encoders[col].transform(test_df[col])
-        y_pred_col = y_pred[:, i]
+        # Restrict to rows whose true label the KNN model actually knows —
+        # matters for baseColour, where V2 introduced new consolidated classes.
+        known_classes = set(knn_encoders[col].classes_)
+        known_mask = test_df[col].isin(known_classes).values
+
+        excluded = (~known_mask).sum()
+        if excluded:
+            print(
+                f"[KNN comparison] {col}: excluding {excluded}/{len(test_df)} "
+                f"test rows with labels unseen by the V1-trained KNN "
+                f"({sorted(set(test_df[col][~known_mask]))})."
+            )
+
+        y_true = knn_encoders[col].transform(test_df[col][known_mask])
+        y_pred_col = y_pred[known_mask, i]
 
         metrics[col] = {
             "accuracy": accuracy_score(y_true, y_pred_col),

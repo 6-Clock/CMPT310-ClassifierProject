@@ -17,12 +17,12 @@ from PIL import Image
 
 import tensorflow as tf
 from tensorflow import keras
-from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
+from tensorflow.keras.applications.resnet50 import preprocess_input
 
 import joblib
 import gradio as gr
 
-MODEL_PATH = Path("models/CNN/mobilenet_multitask.keras")
+MODEL_PATH = Path("models/CNN/resnet50_multitask.keras")
 ENCODERS_PATH = Path("models/CNN/label_encoders.joblib")
 
 IMG_SIZE = 224
@@ -54,7 +54,7 @@ def predict(pil_image):
         return {}, {}, {}, ""
 
     batch = preprocess(pil_image)
-    preds = model.predict(batch)   # dict: {"color": (1,10), "season": (1,4), "usage": (1,4)}
+    preds = model.predict(batch)   # dict: {"color": (1,12), "season": (1,4), "usage": (1,4)}
 
     outputs = {}
     low_confidence_heads = []
