@@ -1,0 +1,18 @@
+MobileNetV2 baseline
+
+Test set: 839 images
+
+baseColour
+Accuracy: 0.5042
+Macro F1: 0.4906
+Micro F1: 0.5042
+
+season
+Accuracy: 0.5459
+Macro F1: 0.3593
+Micro F1: 0.5459
+
+usage
+Accuracy: 0.8367
+Macro F1: 0.8431
+Micro F1: 0.8367

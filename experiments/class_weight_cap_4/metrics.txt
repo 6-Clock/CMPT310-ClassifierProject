@@ -1,0 +1,18 @@
+MobileNetV2 with maximum class weight = 4.0
+
+Test set: 839 images
+
+baseColour
+Accuracy: 0.5530
+Macro F1: 0.5354
+Micro F1: 0.5530
+
+season
+Accuracy: 0.6150
+Macro F1: 0.3958
+Micro F1: 0.6150
+
+usage
+Accuracy: 0.8486
+Macro F1: 0.8563
+Micro F1: 0.8486
