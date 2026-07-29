@@ -4,7 +4,6 @@ import pandas as pd
 from PIL import Image, UnidentifiedImageError
 import joblib
 
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.multioutput import MultiOutputClassifier
@@ -15,7 +14,14 @@ from sklearn.metrics import accuracy_score, f1_score, classification_report
 # File paths
 # =========================
 
-CLEAN_CSV = Path("data/processed/clean_colour_season_style.csv")
+# Train/evaluate on the SAME split the CNN uses (src/preprocess_split.py),
+# instead of KNN's own separate 80/20 split. That old approach let KNN's own
+# training set overlap with the CNN's test set by ~80% (both were carved out
+# of the same pool independently), making the KNN-vs-CNN comparison in
+# evaluate_cnn.py invalid. Using the identical split makes it a fair, honest
+# comparison with zero overlap.
+TRAIN_CSV = Path("data/processed/train_v2.csv")
+TEST_CSV = Path("data/processed/test_v2.csv")
 MODEL_DIR = Path("models/KNN")
 MODEL_PATH = MODEL_DIR / "knn_baseline.joblib"
 
@@ -25,8 +31,6 @@ MODEL_PATH = MODEL_DIR / "knn_baseline.joblib"
 # =========================
 
 IMAGE_SIZE = (96, 96)
-RANDOM_STATE = 42
-TEST_SIZE = 0.2
 N_NEIGHBORS = 5
 
 LABEL_COLS = ["baseColour", "season", "usage"]
@@ -39,6 +43,10 @@ def load_and_flatten_images(df):
     """
     Loads image files from image_path, resizes them, and flattens each image
     into a one-dimensional feature vector for KNN.
+
+    image_path already points at the pre-resized 96x96 images (images_96_v2/,
+    aspect-ratio-preserving padding from preprocess_split.py), so .resize()
+    here is a no-op in practice -- kept as a safety net.
     """
 
     X = []
@@ -66,25 +74,23 @@ def load_and_flatten_images(df):
     return X, valid_df
 
 
-def encode_labels(df):
+def fit_label_encoders(df):
     """
-    Encodes text labels into integers because scikit-learn models need
-    numeric target values.
+    Fits one LabelEncoder per label column on the TRAINING data only, so we
+    never let the test set's label distribution leak into encoding.
     """
-
-    y_encoded_parts = []
     label_encoders = {}
-
     for col in LABEL_COLS:
         encoder = LabelEncoder()
-        encoded_col = encoder.fit_transform(df[col])
-
-        y_encoded_parts.append(encoded_col)
+        encoder.fit(df[col])
         label_encoders[col] = encoder
+    return label_encoders
 
-    y = np.column_stack(y_encoded_parts)
 
-    return y, label_encoders
+def encode_labels(df, label_encoders):
+    """Encodes text labels into integers using already-fitted encoders."""
+    y_encoded_parts = [label_encoders[col].transform(df[col]) for col in LABEL_COLS]
+    return np.column_stack(y_encoded_parts)
 
 
 def evaluate_model(y_test, y_pred, label_encoders):
@@ -120,49 +126,38 @@ def evaluate_model(y_test, y_pred, label_encoders):
         )
 
 
+def load_split(csv_path):
+    df = pd.read_csv(csv_path)
+
+    required_cols = ["image_path"] + LABEL_COLS
+    missing_cols = [col for col in required_cols if col not in df.columns]
+    if missing_cols:
+        raise ValueError(f"Missing required columns in {csv_path}: {missing_cols}")
+
+    return df.dropna(subset=required_cols).reset_index(drop=True)
+
+
 def main():
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
 
-    print("Loading cleaned dataset...")
-    df = pd.read_csv(CLEAN_CSV)
+    print("Loading train/test splits...")
+    train_df = load_split(TRAIN_CSV)
+    test_df = load_split(TEST_CSV)
+    print(f"Train rows: {len(train_df)} | Test rows: {len(test_df)}")
 
-    print(f"Initial rows: {len(df)}")
+    print("Loading and flattening training images...")
+    X_train, train_df = load_and_flatten_images(train_df)
 
-    # Make sure required columns exist
-    required_cols = ["image_path"] + LABEL_COLS
-    missing_cols = [col for col in required_cols if col not in df.columns]
+    print("Loading and flattening test images...")
+    X_test, test_df = load_and_flatten_images(test_df)
 
-    if missing_cols:
-        raise ValueError(f"Missing required columns in CSV: {missing_cols}")
-
-    # Remove rows with missing labels or image paths
-    df = df.dropna(subset=required_cols).reset_index(drop=True)
-
-    print(f"Rows after dropping missing values: {len(df)}")
-
-    print("Loading and flattening images...")
-    X, df = load_and_flatten_images(df)
-
-    print(f"Final image feature matrix shape: {X.shape}")
-    print(f"Final label dataframe shape: {df.shape}")
+    print(f"Train feature matrix shape: {X_train.shape}")
+    print(f"Test feature matrix shape: {X_test.shape}")
 
     print("Encoding labels...")
-    y, label_encoders = encode_labels(df)
-
-    # Stratify by usage because your data was mainly balanced by usage
-    stratify_col = df["usage"]
-
-    print("Splitting train/test data...")
-    X_train, X_test, y_train, y_test = train_test_split(
-        X,
-        y,
-        test_size=TEST_SIZE,
-        random_state=RANDOM_STATE,
-        stratify=stratify_col
-    )
-
-    print(f"Training rows: {X_train.shape[0]}")
-    print(f"Testing rows: {X_test.shape[0]}")
+    label_encoders = fit_label_encoders(train_df)
+    y_train = encode_labels(train_df, label_encoders)
+    y_test = encode_labels(test_df, label_encoders)
 
     print("Training KNN baseline...")
 
