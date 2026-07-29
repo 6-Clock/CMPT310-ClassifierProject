@@ -36,6 +36,67 @@ encoders = joblib.load(ENCODERS_PATH)
 # Map model output head -> the encoder that decodes its integer classes.
 HEAD_TO_COL = {"color": "baseColour", "season": "season", "usage": "usage"}
 
+#pinterest style page
+TAG_TOP_K = 2
+
+
+def format_tag(label: str) -> str:
+    cleaned = "-".join(str(label).strip().lower().split())
+    return f"#{cleaned}"
+
+
+def suggest_pin_tags(pil_image):
+    if pil_image is None:
+        return (
+            gr.Dropdown(
+                choices=[],
+                value=[],
+                multiselect=True,
+                allow_custom_value=True,
+            ),
+            "Upload a clothing image to generate tags.",
+        )
+
+    preds = model.predict(preprocess(pil_image), verbose=0)
+
+    choices = []
+    selected = []
+    confidence_lines = []
+
+    for head, col in HEAD_TO_COL.items():
+        probs = np.asarray(preds[head][0])
+        class_names = encoders[col].classes_
+
+        top_indices = np.argsort(probs)[::-1][:TAG_TOP_K]
+
+        for rank, class_index in enumerate(top_indices):
+            tag = format_tag(class_names[class_index])
+
+            if tag not in choices:
+                choices.append(tag)
+
+            # Automatically select the strongest prediction
+            if rank == 0:
+                selected.append(tag)
+
+        best_index = top_indices[0]
+        best_probability = float(probs[best_index])
+        best_label = class_names[best_index]
+
+        confidence_lines.append(
+            f"**{head.title()}:** {best_label} "
+            f"({best_probability:.1%})"
+        )
+
+    updated_tags = gr.Dropdown(
+        choices=choices,
+        value=selected,
+        multiselect=True,
+        allow_custom_value=True,
+        interactive=True,
+    )
+
+    return updated_tags, " · ".join(confidence_lines)
 
 def preprocess(pil_image):
     """PIL image (any size) -> a (1, 224, 224, 3) batch ready for the model,
@@ -97,6 +158,65 @@ demo = gr.Interface(
     title="Clothing Attribute Classifier",
     description="Predicts colour, season, and usage from a single clothing photo.",
 )
+
+with demo.route("Create Listing", "/create-pin"):
+    gr.Markdown("# Create Listing")
+
+    with gr.Row():
+        with gr.Column(scale=5):
+            pin_image = gr.Image(
+                type="pil",
+                sources=["upload"],
+                label="Choose a file or drag and drop it here",
+                height=520,
+            )
+
+        with gr.Column(scale=7):
+            pin_title = gr.Textbox(
+                label="Title",
+                placeholder="Title",
+            )
+
+            pin_description = gr.Textbox(
+                label="Description",
+                placeholder="Describe your clothing item",
+                lines=4,
+            )
+
+            pin_link = gr.Textbox(
+                label="Price",
+                placeholder="0.00",
+            )
+
+            pin_board = gr.Dropdown(
+                choices=[
+                    "Fashion Ideas",
+                    "Outfit Inspiration",
+                    "Seasonal Looks",
+                ],
+                allow_custom_value=True,
+                label="Board",
+            )
+
+            pin_tags = gr.Dropdown(
+                choices=[],
+                value=[],
+                multiselect=True,
+                allow_custom_value=True,
+                label="Suggested tags",
+            )
+
+            tag_confidence = gr.Markdown(
+                "Upload an image to generate CNN tag suggestions."
+            )
+
+            save_button = gr.Button("Post Listing", variant="primary")
+
+    pin_image.change(
+        fn=suggest_pin_tags,
+        inputs=pin_image,
+        outputs=[pin_tags, tag_confidence],
+    )
 
 
 if __name__ == "__main__":
