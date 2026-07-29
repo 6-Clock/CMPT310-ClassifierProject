@@ -4,26 +4,6 @@ Multi-label image classifier that predicts four clothing attributes (color, seas
 
 ---
 
-
-
-## Gradio Demo
-
-Screenshots of `src/CNN/app_gradio.py` in action.
-
-**Input/output layout:**
-
-![Gradio app layout](images_repo/gradio_app_example0.png)
-
-**Example 1** — a navy blue soccer jersey, correctly predicted as Blue / Summer / Sports, all above the confidence threshold:
-
-![Gradio example 1](images_repo/gradio_app_example1.png)
-
-**Example 2** — a white dress shirt, correctly predicted as White / Formal, but season confidence is low (Spring 43%), so the review flag triggers:
-
-![Gradio example 2](images_repo/gradio_app_example2.png)
-
----
-
 ## Stack
 
 - **Language:** Python 3.10+
@@ -100,6 +80,28 @@ CMPT310 Project/
 ├── requirements.txt
 └── README.md
 ```
+
+---
+
+## Gradio Demo
+
+Screenshots of `src/CNN/app_gradio.py` in action.
+
+**Input/output layout:**
+
+![Gradio app layout](images_repo/gradio_app_example0.png)
+
+**Example 1** — a navy blue soccer jersey, correctly predicted as Blue / Summer / Sports, all above the confidence threshold:
+
+![Gradio example 1](images_repo/gradio_app_example1.png)
+
+**Example 2** — a white dress shirt, correctly predicted as White / Formal, but season confidence is low (Spring 43%), so the review flag triggers:
+
+![Gradio example 2](images_repo/gradio_app_example2.png)
+
+**Example 3** — Post Listing with suggested tags:
+
+![Gradio example 3](images_repo/gradio_app_example3.png)
 
 ---
 
