@@ -1,5 +1,6 @@
 # Virtual environment
 venv/
+.venv/
 
 # Raw dataset (large binary files — download via Kaggle CLI)
 data/raw/
