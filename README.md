@@ -4,6 +4,10 @@ Multi-label image classifier that predicts four clothing attributes (color, seas
 
 ---
 
+Note on contributors: This repository shows five contributors, but the team consists of four members. Arturo Zhang Luo has two GitHub accounts (6-Clock (Personal email) and ArturoZhangLuo (SFU email) that were both used to commit to this repo over the course of the project. Both accounts belong to the same person — apologies for any confusion this causes when reviewing contribution history.
+
+---
+
 ## Stack
 
 - **Language:** Python 3.10+
