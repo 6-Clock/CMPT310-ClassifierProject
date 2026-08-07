@@ -445,6 +445,12 @@ The notebook will:
 - Show a sample grid of 9 clothing images
 
 ---
+
+### 7. Gradio
+```bash
+python src/CNN/papp_gradio.py
+```
+Then, type: http://127.0.0.1:7860 in the browser to access the application.
 ## Verify the Install
 
 ```powershell
